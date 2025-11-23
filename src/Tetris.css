@@ -1,52 +1,71 @@
+:root {
+  --bg-body: #050816;
+  --bg-card: rgba(15, 23, 42, 0.9);
+  --bg-card-soft: rgba(15, 23, 42, 0.75);
+  --border-subtle: rgba(148, 163, 184, 0.35);
+  --accent-primary: #22c55e;
+  --accent-primary-soft: rgba(34, 197, 94, 0.16);
+  --accent-warm: #f97316;
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-soft: #6b7280;
+}
+
 /* Root layout */
 .tetris-root {
   min-height: 100vh;
-  min-width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top, #020617, #020617 40%, #000);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  color: #e5e7eb;
+  background:
+    radial-gradient(circle at top, #111827 0, transparent 55%),
+    radial-gradient(circle at bottom, #020617 0, #020617 55%);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+  color: var(--text-main);
 }
 
 /* Shell */
 .tetris-container {
-  background: rgba(15, 23, 42, 0.96);
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  padding: 16px 20px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+  background: var(--bg-card);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  padding: 18px 20px 20px;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.7);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: 760px;
+  gap: 14px;
+  max-width: 820px;
 }
 
-/* Nintendo-style title bar */
+/* Modern title bar */
 .tetris-titlebar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(90deg, #ef4444, #f97316);
+  gap: 12px;
+  background: linear-gradient(135deg, #22c55e, #0ea5e9);
   border-radius: 999px;
-  padding: 4px 10px;
-  box-shadow: 0 8px 22px rgba(248, 113, 113, 0.35);
+  padding: 4px 12px;
+  box-shadow: 0 12px 35px rgba(34, 197, 94, 0.4);
 }
 
 .tetris-logo {
   width: 26px;
   height: 26px;
-  border-radius: 999px;
-  background: #111827;
-  border: 2px solid rgba(248, 250, 252, 0.85);
+  border-radius: 9px;
+  background: radial-gradient(circle at 30% 30%, #e5e7eb, #111827);
+  border: 1px solid rgba(15, 23, 42, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.85rem;
-  letter-spacing: 0.03em;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: #0f172a;
 }
 
 .tetris-titlebar-text {
@@ -57,14 +76,13 @@
 
 .tetris-titlebar-text .title-main {
   font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .tetris-titlebar-text .title-sub {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
   opacity: 0.9;
 }
 
@@ -73,77 +91,105 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  padding-bottom: 10px;
+  margin-top: 2px;
 }
 
 .tetris-title {
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 550;
+  letter-spacing: 0.02em;
 }
 
 .tetris-stats {
   display: flex;
-  gap: 16px;
-  font-size: 0.95rem;
-  color: #cbd5f5;
+  gap: 14px;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+.tetris-stats div {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 /* Main content */
 .tetris-main {
   display: flex;
-  gap: 16px;
-  margin-top: 8px;
+  gap: 18px;
+  margin-top: 6px;
 }
 
 /* Board */
 .tetris-board {
-  background: #020617;
-  border-radius: 8px;
-  padding: 4px;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
-  position: relative; /* for overlay */
+  background: radial-gradient(circle at top, #020617, #020617 55%);
+  border-radius: 16px;
+  padding: 10px;
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.9),
+    0 18px 40px rgba(15, 23, 42, 0.9);
+  position: relative;
 }
 
 .tetris-row {
   display: flex;
+  justify-content: center;
 }
 
 .tetris-cell {
   width: 22px;
   height: 22px;
   margin: 1px;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.9),
+    0 3px 6px rgba(15, 23, 42, 0.7);
+  transition: transform 0.08s ease, box-shadow 0.08s ease,
+    background-color 0.12s ease;
 }
 
 /* Ghost piece */
 .ghost-cell {
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.9);
-  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.9),
+    0 0 0 1px rgba(148, 163, 184, 0.4);
+  border-radius: 6px;
 }
 
 /* Sidebar */
 .tetris-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 180px;
+  gap: 14px;
+  min-width: 200px;
+}
+
+.sidebar-section {
+  background: var(--bg-card-soft);
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.7);
 }
 
 .sidebar-section h2 {
   margin: 0 0 6px 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: #e5e7eb;
+  color: var(--text-main);
 }
 
+/* Next piece preview */
 .next-preview {
   background: #020617;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px;
   display: inline-block;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.85);
 }
 
 .next-cell {
@@ -151,12 +197,13 @@
   height: 18px;
 }
 
+/* Controls list */
 .controls-list {
   list-style: none;
   padding-left: 0;
   margin: 0;
-  font-size: 0.9rem;
-  color: #cbd5f5;
+  font-size: 0.85rem;
+  color: var(--text-soft);
 }
 
 .controls-list li {
@@ -166,20 +213,21 @@
 /* Buttons */
 .tetris-button {
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border-radius: 999px;
-  background: #22c55e;
+  background: var(--accent-primary);
   border: none;
   font-weight: 600;
   color: #022c22;
   cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease,
-    background-color 0.1s ease;
+  transition: transform 0.1s ease, box-shadow 0.12s ease,
+    background-color 0.12s ease;
+  font-size: 0.9rem;
 }
 
 .tetris-button:hover {
   background: #16a34a;
-  box-shadow: 0 10px 20px rgba(34, 197, 94, 0.25);
+  box-shadow: 0 12px 28px var(--accent-primary-soft);
   transform: translateY(-1px);
 }
 
@@ -190,9 +238,9 @@
 
 .game-over {
   margin-bottom: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #f97316;
+  color: var(--accent-warm);
   text-align: center;
 }
 
@@ -212,34 +260,35 @@
 
 .start-card {
   background: rgba(15, 23, 42, 0.98);
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.55);
-  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border-subtle);
+  padding: 18px 20px 14px;
   text-align: center;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.95);
-  max-width: 240px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.9);
+  max-width: 260px;
 }
 
 .start-title {
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
 .start-subtitle {
-  font-size: 0.85rem;
-  color: #9ca3af;
-  margin-bottom: 10px;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
 }
 
 .start-instructions p {
   margin: 2px 0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
 }
 
 .start-instructions span {
   font-weight: 600;
-  color: #fde68a;
+  color: #facc15;
 }
 
 .start-instructions ul {
@@ -247,7 +296,7 @@
   padding-left: 0;
   margin: 8px 0 12px 0;
   font-size: 0.8rem;
-  color: #cbd5f5;
+  color: var(--text-soft);
 }
 
 .start-instructions li {
@@ -255,5 +304,5 @@
 }
 
 .start-button {
-  margin-top: 4px;
+  margin-top: 6px;
 }
