@@ -1,10 +1,3 @@
-Here is a **clean, modern, beautifully styled README.md** you can drop directly into your GitHub repo.
-
-It matches your tech stack (React + TypeScript + Vite + React Router + Tetris clone).
-It also shows off features like ghost piece, high scores, modern UI, GitHub Pages deploy, etc.
-
-Copy/paste the entire thing into `README.md`.
-
 ---
 
 # 🎮 Modern Tetris — React + TypeScript + Vite
