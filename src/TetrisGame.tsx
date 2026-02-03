@@ -527,11 +527,7 @@ const TetrisGame: React.FC = () => {
         </div>
 
         <div className="tetris-main">
-          <div 
-            className="tetris-board"
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-          >
+          <div className="tetris-board">
             {displayBoard.map((row, y) => (
               <div className="tetris-row" key={y}>
                 {row.map((cell, x) => {
