@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+// TetrisGame.tsx
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import "./Tetris.css";
 
 const ROWS = 20;
@@ -132,12 +133,7 @@ function mergePieceToBoard(
       const boardX = pos.x + x;
       const boardY = pos.y + y;
 
-      if (
-        boardY >= 0 &&
-        boardY < ROWS &&
-        boardX >= 0 &&
-        boardX < COLS
-      ) {
+      if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
         newBoard[boardY][boardX] = type;
       }
     }
@@ -202,16 +198,22 @@ function getCellColor(cell: Cell): string {
 const TetrisGame: React.FC = () => {
   const [board, setBoard] = useState<Cell[][]>(() => createEmptyBoard());
   const [current, setCurrent] = useState<ActivePiece | null>(null);
-  const [nextPiece, setNextPiece] = useState<ActivePiece>(() =>
-    randomTetromino()
-  );
+  const [nextPiece, setNextPiece] = useState<ActivePiece>(() => randomTetromino());
   const [score, setScore] = useState<number>(0);
   const [lines, setLines] = useState<number>(0);
   const [highScore, setHighScore] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [gameOver, setGameOver] = useState<boolean>(false);
   const [dropTime, setDropTime] = useState<number>(800);
   const [hasStarted, setHasStarted] = useState<boolean>(false);
+
+  // Flash state (every 4 lines total)
+  const [flashWhite, setFlashWhite] = useState(false);
+  const [, setLinesSinceFlash] = useState<number>(0);
+
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
 
   // Load high score from localStorage on mount
   useEffect(() => {
@@ -222,7 +224,7 @@ const TetrisGame: React.FC = () => {
         if (!Number.isNaN(parsed)) setHighScore(parsed);
       }
     } catch {
-      // ignore if localStorage not available
+      // ignore
     }
   }, []);
 
@@ -238,12 +240,35 @@ const TetrisGame: React.FC = () => {
     }
   }, [score, highScore]);
 
-  const spawnPiece = () => {
+  const triggerFlashIfNeeded = (clearedNow: number) => {
+    if (clearedNow <= 0) return;
+
+    setLinesSinceFlash((prev) => {
+      const total = prev + clearedNow;
+
+      if (total >= 4) {
+        setFlashWhite(true);
+
+        window.setTimeout(() => {
+          setFlashWhite(false);
+        }, 1000);
+
+        // Reset after flashing.
+        // If you prefer to keep remainder, use: return total % 4;
+        return total % 4;
+      }
+
+      return total;
+    });
+  };
+
+  const spawnPiece = (boardToCheck: Cell[][]) => {
     const newPiece = nextPiece;
     const freshNext = randomTetromino();
 
-    if (checkCollision(newPiece.shape, newPiece.pos, board)) {
+    if (checkCollision(newPiece.shape, newPiece.pos, boardToCheck)) {
       setIsRunning(false);
+      setIsPaused(false);
       setGameOver(true);
       return;
     }
@@ -253,12 +278,18 @@ const TetrisGame: React.FC = () => {
   };
 
   const startGame = () => {
-    setBoard(createEmptyBoard());
+    const freshBoard = createEmptyBoard();
+    setBoard(freshBoard);
     setScore(0);
     setLines(0);
+    setLinesSinceFlash(0);
+    setFlashWhite(false);
+
     setGameOver(false);
+    setIsPaused(false);
     setIsRunning(true);
     setHasStarted(true);
+
     const first = randomTetromino();
     const second = randomTetromino();
     setCurrent(first);
@@ -267,91 +298,112 @@ const TetrisGame: React.FC = () => {
   };
 
   const movePiece = (dx: number) => {
-    if (!current || !isRunning) return;
+    if (!current || !isRunning || isPaused) return;
     const newPos: Position = { ...current.pos, x: current.pos.x + dx };
     if (!checkCollision(current.shape, newPos, board)) {
       setCurrent({ ...current, pos: newPos });
     }
   };
 
-  const softDrop = () => {
-    if (!current || !isRunning) return;
-    const newPos: Position = { ...current.pos, y: current.pos.y + 1 };
-
-    if (!checkCollision(current.shape, newPos, board)) {
-      setCurrent({ ...current, pos: newPos });
-      setScore((s) => s + 1);
-    } else {
-      const merged = mergePieceToBoard(
-        current.shape,
-        current.pos,
-        board,
-        current.type
-      );
-      const { board: clearedBoard, cleared } = clearLines(merged);
-
-      if (cleared > 0) {
-        setScore((s) => s + cleared * 100);
-        setLines((l) => l + cleared);
-        setDropTime((t) => Math.max(150, t - cleared * 10));
-      }
-
-      setBoard(clearedBoard);
-      spawnPiece();
-    }
-  };
-
-  const hardDrop = () => {
-    if (!current || !isRunning) return;
-
-    let dropPos: Position = { ...current.pos };
-    while (
-      !checkCollision(
-        current.shape,
-        { ...dropPos, y: dropPos.y + 1 },
-        board
-      )
-    ) {
-      dropPos = { ...dropPos, y: dropPos.y + 1 };
-      setScore((s) => s + 2);
-    }
-
-    const merged = mergePieceToBoard(
-      current.shape,
-      dropPos,
-      board,
-      current.type
-    );
+  const lockPieceAndContinue = (shape: ShapeMatrix, pos: Position, type: TetrominoKey) => {
+    const merged = mergePieceToBoard(shape, pos, board, type);
     const { board: clearedBoard, cleared } = clearLines(merged);
+
     if (cleared > 0) {
       setScore((s) => s + cleared * 100);
       setLines((l) => l + cleared);
       setDropTime((t) => Math.max(150, t - cleared * 10));
+      triggerFlashIfNeeded(cleared);
     }
+
     setBoard(clearedBoard);
-    spawnPiece();
+    spawnPiece(clearedBoard);
+  };
+
+  const softDrop = () => {
+    if (!current || !isRunning || isPaused) return;
+
+    const newPos: Position = { ...current.pos, y: current.pos.y + 1 };
+    if (!checkCollision(current.shape, newPos, board)) {
+      setCurrent({ ...current, pos: newPos });
+      setScore((s) => s + 1);
+    } else {
+      lockPieceAndContinue(current.shape, current.pos, current.type);
+    }
+  };
+
+  const hardDrop = () => {
+    if (!current || !isRunning || isPaused) return;
+
+    let dropPos: Position = { ...current.pos };
+    while (!checkCollision(current.shape, { ...dropPos, y: dropPos.y + 1 }, board)) {
+      dropPos = { ...dropPos, y: dropPos.y + 1 };
+      setScore((s) => s + 2);
+    }
+
+    lockPieceAndContinue(current.shape, dropPos, current.type);
   };
 
   const rotatePiece = () => {
-    if (!current || !isRunning) return;
-    const rotated = rotateMatrix(current.shape);
+    if (!current || !isRunning || isPaused) return;
 
+    const rotated = rotateMatrix(current.shape);
     const kicks = [0, -1, 1, -2, 2];
+
     for (let i = 0; i < kicks.length; i++) {
-      const newPos: Position = {
-        x: current.pos.x + kicks[i],
-        y: current.pos.y,
-      };
+      const newPos: Position = { x: current.pos.x + kicks[i], y: current.pos.y };
       if (!checkCollision(rotated, newPos, board)) {
         setCurrent({ ...current, shape: rotated, pos: newPos });
         return;
       }
     }
+
   };
+
+    // Touch controls: tap = rotate, swipe down = hard drop
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isRunning || gameOver || isPaused) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, t: Date.now() };
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!isRunning || gameOver || isPaused) return;
+
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const dt = Date.now() - start.t;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    // thresholds
+    const TAP_MAX_MOVE = 12;    // px
+    const TAP_MAX_TIME = 250;   // ms
+    const SWIPE_MIN_DIST = 40;  // px
+
+    // Tap: rotate
+    if (absX < TAP_MAX_MOVE && absY < TAP_MAX_MOVE && dt <= TAP_MAX_TIME) {
+      rotatePiece();
+      return;
+    }
+
+    // Swipe down: hard drop
+    if (dy > SWIPE_MIN_DIST && absY > absX) {
+      hardDrop();
+      return;
+    }
+  };
+
 
   // Auto fall
   useEffect(() => {
-    if (!isRunning || !current || gameOver) return;
+    if (!isRunning || !current || gameOver || isPaused) return;
 
     const intervalId = window.setInterval(() => {
       softDrop();
@@ -359,17 +411,27 @@ const TetrisGame: React.FC = () => {
 
     return () => window.clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, current, dropTime, gameOver, board]);
+  }, [isRunning, current, dropTime, gameOver, board, isPaused]);
 
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !isRunning) {
-        startGame();
+      // Enter: start / restart OR pause / unpause
+      if (e.key === "Enter") {
+        e.preventDefault();
+
+        // If game isn't running (either never started or game over), Enter starts/restarts.
+        if (!isRunning || gameOver) {
+          startGame();
+          return;
+        }
+
+        // If running, Enter toggles pause.
+        setIsPaused((p) => !p);
         return;
       }
 
-      if (!isRunning || !current || gameOver) return;
+      if (!isRunning || !current || gameOver || isPaused) return;
 
       switch (e.key) {
         case "ArrowLeft":
@@ -402,7 +464,7 @@ const TetrisGame: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning, current, gameOver, board]);
+  }, [isRunning, current, gameOver, board, isPaused]);
 
   // Ghost piece coordinates
   const ghostCoords = useMemo(() => {
@@ -410,13 +472,7 @@ const TetrisGame: React.FC = () => {
     if (!current) return coords;
 
     let dropPos: Position = { ...current.pos };
-    while (
-      !checkCollision(
-        current.shape,
-        { ...dropPos, y: dropPos.y + 1 },
-        board
-      )
-    ) {
+    while (!checkCollision(current.shape, { ...dropPos, y: dropPos.y + 1 }, board)) {
       dropPos = { ...dropPos, y: dropPos.y + 1 };
     }
 
@@ -426,12 +482,7 @@ const TetrisGame: React.FC = () => {
         if (!shape[y][x]) continue;
         const boardX = dropPos.x + x;
         const boardY = dropPos.y + y;
-        if (
-          boardY >= 0 &&
-          boardY < ROWS &&
-          boardX >= 0 &&
-          boardX < COLS
-        ) {
+        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
           coords.add(`${boardY},${boardX}`);
         }
       }
@@ -450,12 +501,7 @@ const TetrisGame: React.FC = () => {
           if (!shape[y][x]) continue;
           const boardX = pos.x + x;
           const boardY = pos.y + y;
-          if (
-            boardY >= 0 &&
-            boardY < ROWS &&
-            boardX >= 0 &&
-            boardX < COLS
-          ) {
+          if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
             copy[boardY][boardX] = type;
           }
         }
@@ -468,6 +514,8 @@ const TetrisGame: React.FC = () => {
 
   return (
     <div className="tetris-root">
+      {flashWhite && <div className="tetris-flash-overlay" />}
+
       <div className="tetris-container">
         <div className="tetris-header">
           <h1 className="tetris-title">React Tetris</h1>
@@ -479,22 +527,24 @@ const TetrisGame: React.FC = () => {
         </div>
 
         <div className="tetris-main">
-          <div className="tetris-board">
+          <div 
+            className="tetris-board"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
             {displayBoard.map((row, y) => (
               <div className="tetris-row" key={y}>
                 {row.map((cell, x) => {
                   const key = `${y},${x}`;
-                  const isGhost =
-                    ghostCoords.has(key) && cell === 0 && current;
+                  const isGhost = ghostCoords.has(key) && cell === 0 && current;
                   const backgroundColor = isGhost
                     ? "rgba(148, 163, 184, 0.18)"
                     : getCellColor(cell);
+
                   return (
                     <div
                       key={x}
-                      className={`tetris-cell ${
-                        isGhost ? "ghost-cell" : ""
-                      }`}
+                      className={`tetris-cell ${isGhost ? "ghost-cell" : ""}`}
                       style={{ backgroundColor }}
                     />
                   );
@@ -509,21 +559,31 @@ const TetrisGame: React.FC = () => {
                   <div className="start-title">React Tetris</div>
                   <div className="start-subtitle">Nintendo-style clone</div>
                   <div className="start-instructions">
-                    <p>Press <span>Enter</span> to start</p>
+                    <p>
+                      Press <span>Enter</span> to start
+                    </p>
                     <p>or click the button below.</p>
                     <ul>
                       <li>← → : Move</li>
                       <li>↑ / X : Rotate</li>
                       <li>↓ : Soft drop</li>
                       <li>Space : Hard drop</li>
+                      <li>Enter : Pause / Resume</li>
                     </ul>
                   </div>
-                  <button
-                    className="tetris-button start-button"
-                    onClick={startGame}
-                  >
+                  <button className="tetris-button start-button" onClick={startGame}>
                     Start Game
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Pause overlay */}
+            {isRunning && !gameOver && isPaused && (
+              <div className="tetris-pause-overlay">
+                <div className="pause-card">
+                  <div className="pause-title">Paused</div>
+                  <div className="pause-subtitle">Press Enter to resume</div>
                 </div>
               </div>
             )}
@@ -541,9 +601,7 @@ const TetrisGame: React.FC = () => {
                           key={x}
                           className="tetris-cell next-cell"
                           style={{
-                            backgroundColor: v
-                              ? getCellColor(nextPiece.type)
-                              : "#020617",
+                            backgroundColor: v ? getCellColor(nextPiece.type) : "#020617",
                           }}
                         />
                       ))}
@@ -559,7 +617,7 @@ const TetrisGame: React.FC = () => {
                 <li>↑ / X : Rotate</li>
                 <li>↓ : Soft drop</li>
                 <li>Space : Hard drop</li>
-                <li>Enter : Start / restart</li>
+                <li>Enter : Start / Pause / Resume</li>
               </ul>
             </div>
 
@@ -576,6 +634,15 @@ const TetrisGame: React.FC = () => {
                     Play Again
                   </button>
                 </>
+              )}
+              {isRunning && !gameOver && (
+                <button
+                  className="tetris-button"
+                  onClick={() => setIsPaused((p) => !p)}
+                  style={{ opacity: 0.95 }}
+                >
+                  {isPaused ? "Resume" : "Pause"}
+                </button>
               )}
             </div>
           </div>
